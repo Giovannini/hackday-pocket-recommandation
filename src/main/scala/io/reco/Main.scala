@@ -1,37 +1,48 @@
 package io.reco
 
+import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.server.Directives._
+import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
-import com.twitter.finagle.{Http, Service, http}
-import com.twitter.util.{Await, Future}
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+import spray.json.DefaultJsonProtocol._
 
 object Main extends App {
+
+  implicit val system = ActorSystem("pocket-reco")
+  implicit val materializer = ActorMaterializer()
+  // needed for the future flatMap/onComplete in the end
+  implicit val executionContext = system.dispatcher
 
   val configuration = ConfigFactory.load()
   Conf.loadConfig(configuration)
 
+  case class UrlReq(url: String)
 
-  val client: Service[http.Request, http.Response] = Http.newService("www.scala-lang.org:80")
-  val request = http.Request(http.Method.Post, "/")
-  request.host = "www.scala-lang.org"
+  implicit val urlRequestFormat = jsonFormat1(UrlReq)
 
-  val default = "defaultUrl"
-
-  val service = new Service[http.Request, http.Response] {
-    def apply(req: http.Request): Future[http.Response] = {
-      val param: String = req.getParam("url", default)
-
-      val content = param match {
-        case `default` => "Impossible de parser l'url"
-        case other => ReadFromUrl.extractTextFromUrl(other)
+  val route =
+    path("url") {
+      post {
+        entity(as[UrlReq]) { url =>
+          println("okok")
+          println(url)
+          complete(ReadFromUrl.extractTextFromUrl(url.url))
+        }
+      }
+    } ~
+      path("") {
+        complete("Le serveur est ON.")
       }
 
-      val r = req.response
-      r.setStatusCode(200)
-      r.setContentString(content)
-      Future.value(r)
-    }
+  val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
+  println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
+
+  sys.addShutdownHook {
+    bindingFuture
+      .flatMap(_.unbind()) // trigger unbinding from the port
+      .onComplete(_ ⇒ system.terminate()) // and shutdown when done
   }
 
-  val server = Http.serve(":8080", service)
-  Await.ready(server)
 }
