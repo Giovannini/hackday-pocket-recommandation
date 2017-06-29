@@ -14,3 +14,4 @@ libraryDependencies ++= Seq(
   "org.jsoup" % "jsoup" % "1.7.2"
 )
 fork in run := true
+cancelable in Global := true
