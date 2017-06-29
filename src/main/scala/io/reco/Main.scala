@@ -1,9 +1,14 @@
 package io.reco
 
+import com.typesafe.config.ConfigFactory
 import com.twitter.finagle.{Http, Service, http}
 import com.twitter.util.{Await, Future}
 
 object Main extends App {
+
+  val configuration = ConfigFactory.load()
+  Conf.loadConfig(configuration)
+
 
   val client: Service[http.Request, http.Response] = Http.newService("www.scala-lang.org:80")
   val request = http.Request(http.Method.Post, "/")
