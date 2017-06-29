@@ -19,8 +19,8 @@ class MeaningExtractor(implicit
 
   def getEntitiesFromText(text: String, lang: String = "en"): Future[Seq[Entity]] = {
     getMeaningForText(text, lang).map { json =>
-      json.asJsObject.getFields("entity_list") match {
-        case Seq(JsArray(entityList)) => entityList.map {
+      json.asJsObject.getFields("entity_list", "concept_list") match {
+        case Seq(JsArray(entityList), JsArray(conceptList)) => (entityList ++ conceptList).map {
           _.asJsObject.getFields("relevance", "form") match {
             case Vector(JsString(relevance), JsString(word)) => Entity(word, relevance.toInt)
             case other =>
@@ -35,7 +35,7 @@ class MeaningExtractor(implicit
     }
   }
 
-  private def getMeaningForText(text: String, lang: String = "en"): Future[JsValue] = {
+  def getMeaningForText(text: String, lang: String = "en"): Future[JsValue] = {
     val formData = FormData(
       Map(
         "key" -> "36ab8f8c673d1c40064a75e19efb5ace",

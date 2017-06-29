@@ -27,7 +27,23 @@ object Extractor {
     ec: ExecutionContext
   ): Route = {
     onComplete(meaningExtractor.getEntitiesFromText(textFromArticle)) {
-      case util.Success(entities) => complete(JsObject("entities" -> JsArray(entities.map(Entity.entityFormat.write):_*)))
+      case util.Success(entities) => complete(JsObject("entities" -> JsArray(
+        entities
+          .filter(_.relevance > 55)
+          .sortBy(-_.relevance)
+          .map(Entity.entityFormat.write):_*)
+      ))
+      case util.Failure(_) => complete(StatusCodes.InternalServerError)
+    }
+  }
+
+  def partialRoute(textFromArticle: String)(implicit
+    actorSystem: ActorSystem,
+    mat: Materializer,
+    ec: ExecutionContext
+  ): Route = {
+    onComplete(meaningExtractor.getMeaningForText(textFromArticle)) {
+      case util.Success(entities) => complete(entities)
       case util.Failure(_) => complete(StatusCodes.InternalServerError)
     }
   }

@@ -33,6 +33,8 @@ object Main extends App {
       get(Extractor.route(ArticleExample.value))
     } ~ path("recommand") {
       post(Reader.route(Extractor.route))
+    } ~ path("partialrecommand") {
+      post(Reader.route(Extractor.partialRoute))
     } ~ path("")(complete("Le serveur est ON."))
 
   val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
