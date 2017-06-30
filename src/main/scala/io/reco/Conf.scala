@@ -4,7 +4,9 @@ import scala.util.{Failure, Try}
 import com.typesafe.config.Config
 
 case class Conf(
-  fbUrl: String
+  fbUrl: String,
+  fbId: String,
+  fbSecret: String
 )
 
 
@@ -13,7 +15,9 @@ object Conf {
   def loadConfig(config: Config): Try[Conf] = {
     val load = for {
       fbUrl <- Try(config.getString("facebook.api-url"))
-    } yield Conf(fbUrl)
+      fbId <- Try(config.getString("facebook.id"))
+      fbSecret <- Try(config.getString("facebook.secret"))
+    } yield Conf(fbUrl, fbId, fbSecret)
 
     load.recoverWith {
       case err =>

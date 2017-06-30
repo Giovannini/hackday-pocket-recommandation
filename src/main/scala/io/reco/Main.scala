@@ -11,6 +11,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.typesafe.config.ConfigFactory
 import io.reco.routes.{Extractor, Reader}
+import akka.http.scaladsl.model.StatusCodes
 
 object Main extends App {
 
@@ -27,7 +28,7 @@ object Main extends App {
   implicit val ec = system.dispatcher
 
   val configuration = ConfigFactory.load()
-  Conf.loadConfig(configuration)
+  val conf = Conf.loadConfig(configuration)
 
   val route =
     path("url") {
@@ -68,6 +69,17 @@ object Main extends App {
     } ~ path("partialrecommand") {
       post(Reader.route(Extractor.partialRoute))
     } ~ path("")(complete("Le serveur est ON."))
+      path("login") {
+        redirect(Oauth(conf.get).uri, StatusCodes.PermanentRedirect)
+      } ~
+      path("callback") {
+        extractUri {
+          uri =>
+            val code = uri.query().get("code")
+            val token = Oauth(conf.get).getToken(code.get)
+            complete(token)
+        }
+      }
 
   val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
   println(s"Server online at http://localhost:8080/")
