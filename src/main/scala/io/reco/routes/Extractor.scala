@@ -56,4 +56,14 @@ object Extractor {
     }
   }
 
+  def extractTextFromDiffBot(text: JsValue): String = {
+    text.asJsObject.getFields("objects") match {
+      case Seq(JsArray(objects)) =>
+        objects.map{ ob =>
+          ob.asJsObject.getFields("text") match {
+            case Seq(JsString(a)) => a
+          }
+        }.mkString("")
+    }
+  }
 }
