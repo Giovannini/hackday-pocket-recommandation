@@ -4,3 +4,6 @@ project/target/
 target/
 .idea/
 .ensime
+.ensime_cache
+chrome.crx
+chrome.pem
