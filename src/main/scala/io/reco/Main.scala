@@ -35,7 +35,20 @@ object Main extends App {
     } ~ path("toto") {
       get(Extractor.route(ArticleExample.value))
     } ~ path("recommand") {
-      post(Reader.route(Extractor.route)) ~
+      post {
+        extractRequest { request =>
+          val vlsOrigin: String = request.headers.find(h => h.name() == "Origin").map(_.value()).getOrElse("")
+          val headers: immutable.Seq[HttpHeader] = collection.immutable.Seq(
+            HttpHeader.parse("Access-Control-Allow-Origin", vlsOrigin),
+            HttpHeader.parse("Access-Control-Allow-Credentials", "true"),
+            HttpHeader.parse("Access-Control-Max-Age", "1728000"),
+            HttpHeader.parse("Cache-Control", "no-cache")
+          ).collect { case ParsingResult.Ok(h, _) => h }
+          respondWithHeaders(headers) {
+            Reader.route(Extractor.route)
+          }
+        }
+      } ~
       options {
         extractRequest { request =>
           request.headers.foreach(h => println(s"Header: $h"))
@@ -44,7 +57,7 @@ object Main extends App {
           val headers: immutable.Seq[HttpHeader] = collection.immutable.Seq(
             HttpHeader.parse("Access-Control-Allow-Origin", "*"),
             HttpHeader.parse("Access-Control-Allow-Methods", "POST, OPTIONS"),
-            HttpHeader.parse("Access-Control-Allow-Headers", "accept, content-type, Origin"),
+            HttpHeader.parse("Access-Control-Allow-Headers", "accept, content-type, access-control-allow-origin"),
             HttpHeader.parse("Access-Control-Max-Age", "1728000")
           ).collect { case ParsingResult.Ok(h, _) => h }
           respondWithHeaders(headers) {

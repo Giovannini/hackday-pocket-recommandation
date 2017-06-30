@@ -24,13 +24,32 @@ document.addEventListener('DOMContentLoaded', function() {
 }, false);
 
 function getInfos(url) {
-  const xhr = new XMLHttpRequest();
-  xhr.open('POST', 'http://localhost:8080/recommand', true);
-  xhr.setRequestHeader("Content-Type", "application/json");
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState === XMLHttpRequest.DONE) {
-      console.log(xhr.responseText);
-    }
-  };
-  xhr.send(JSON.stringify({ url }));
+  // const xhr = new XMLHttpRequest();
+  // xhr.open('POST', 'http://localhost:8080/recommand', true);
+  // xhr.setRequestHeader("Content-Type", "application/json");
+  // xhr.onreadystatechange = function() {
+  //   if (xhr.readyState === XMLHttpRequest.DONE) {
+  //     console.log(xhr.responseText);
+  //   }
+  // };
+  // xhr.send(JSON.stringify({ url }));
+  console.log(window.location);
+
+  fetch('http://localhost:8080/recommand', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Access-Control-Allow-Origin': window.location.origin,
+      'Content-Type': 'application/json',
+      'Origin': window.location.origin,
+      // 'Cache-Control': 'no-cache',
+    },
+    body: JSON.stringify({ url })
+  }).then(res => {
+    console.log(res);
+    return res.json()
+  }, err => console.error(err)).then(
+    s => console.log(s),
+    e => console.warn(e)
+  )
 }
