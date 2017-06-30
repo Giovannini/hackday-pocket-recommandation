@@ -21,8 +21,8 @@ class MeaningExtractor(
   ec: ExecutionContext
 ) {
 
-  def getEntitiesFromText(text: String, lang: String = "en"): Future[Seq[Entity]] = {
-    getMeaningForText(text, lang).map { json =>
+  def getEntitiesFromText(text: String): Future[Seq[Entity]] = {
+    getMeaningForText(text).map { json =>
       json.asJsObject.getFields("entity_list", "concept_list") match {
         case Seq(JsArray(entityList), JsArray(conceptList)) =>
           val result = (entityList ++ conceptList).map {
@@ -39,31 +39,32 @@ class MeaningExtractor(
     }
   }
 
-  def getMeaningForText(text: String, lang: String = "en"): Future[JsValue] = {
-    val formData = FormData(
-      Map(
-        "key" -> "36ab8f8c673d1c40064a75e19efb5ace",
-        "of" -> "json",
-        "lang" -> lang,
-        "txt" -> text,
-        "tt" -> "a",
-        "uw" -> "n"
+  def getMeaningForText(text: String): Future[JsValue] = {
+    findLanguage(text).flatMap { lang =>
+      val formData = FormData(
+        Map(
+          "key" -> "36ab8f8c673d1c40064a75e19efb5ace",
+          "of" -> "json",
+          "lang" -> lang,
+          "txt" -> text,
+          "tt" -> "a",
+          "uw" -> "n"
+        )
       )
-    )
-    for {
-      request <- Marshal(formData).to[RequestEntity]
-      response <- Http().singleRequest(HttpRequest(method = HttpMethods.POST, uri = "http://api.meaningcloud" +
-        ".com/topics-2.0", entity = request))
-      entity <- Unmarshal(response.entity).to[String]
-    } yield entity.parseJson
+      for {
+        request <- Marshal(formData).to[RequestEntity]
+        response <- Http().singleRequest(HttpRequest(method = HttpMethods.POST, uri = "http://api.meaningcloud" +
+          ".com/topics-2.0", entity = request))
+        entity <- Unmarshal(response.entity).to[String]
+      } yield entity.parseJson
+    }
   }
 
-  def findLanguage(text: String): Future[HttpResponse] = {
+  def findLanguage(text: String): Future[String] = {
     val url = "https://api.rosette.com/rest/v1/language"
     val key = "07c46da2f4dea3f9f50e0bac9b6206b5"
 
     val json: String = JsObject("content" -> JsString(text)).toString()
-    println(json)
 
     Http().singleRequest(HttpRequest(
       method = HttpMethods.POST,
@@ -75,7 +76,12 @@ class MeaningExtractor(
         HttpHeader.parse("Cache-Control", "no-cache")
       ).collect { case ParsingResult.Ok(h, _) => h },
       entity = HttpEntity.apply(contentType = ContentTypes.`application/json`, data = ByteString(json))
-    ))
+    )).flatMap(response => Unmarshal(response.entity).to[JsValue])
+      .map(json => json.asJsObject.getFields("languageDetections") match {
+        case Seq(JsArray(vector)) => vector.head.asJsObject.getFields("language") match {
+          case Seq(JsString(language)) => language.take(2)
+        }
+      })
   }
 
 }

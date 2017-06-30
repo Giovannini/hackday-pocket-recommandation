@@ -71,7 +71,6 @@ object Main extends App {
       redirect(Oauth(conf.get).uri, StatusCodes.PermanentRedirect)
     } ~ path("language") {
       post(Reader.route { case (a, _) =>
-        println(a.take(50))
         Extractor.language(a)
       })
     } ~ path("callback") {

@@ -16,7 +16,6 @@ class FriendsLikes(conf: Conf) {
 
   def getLikes(implicit sys: ActorSystem, mat: Materializer, ec: ExecutionContext) = {
     val httpRequest = HttpRequest(uri = uri)
-    println(s"https:${httpRequest.uri}")
     val response = Http().singleRequest(httpRequest.copy(uri = s"https:${httpRequest.uri}"))
     response
 /*      .map {
