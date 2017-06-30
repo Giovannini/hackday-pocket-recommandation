@@ -97,8 +97,9 @@ object Main extends App {
       complete(likes.map(_.toString))
     } ~ path("")(complete("Le serveur est ON."))
 
-  val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
-  println(s"Server online at http://localhost:8080/")
+  val port = configuration.getInt("api.port")
+  val bindingFuture = Http().bindAndHandle(route, "localhost", port)
+  println(s"Server online at http://localhost:$port/")
 
   sys.addShutdownHook {
     bindingFuture
