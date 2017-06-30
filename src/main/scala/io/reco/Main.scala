@@ -11,8 +11,10 @@ import akka.http.scaladsl.model.HttpHeader
 import akka.http.scaladsl.server.Directives.{path, _}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.typesafe.config.ConfigFactory
-import io.reco.routes.{Extractor, Reader}
 import akka.http.scaladsl.model.StatusCodes
+
+import io.reco.routes.{Extractor, Reader}
+import io.reco.model._
 
 object Main extends App {
 
@@ -74,17 +76,25 @@ object Main extends App {
         Extractor.language(a)
       })
     } ~ path("callback") {
-      extractUri {
-        import TokenResultJsonSupport._
-        uri =>
-          val code = uri.query().get("code")
-          val likes = for {
-            conf <- Future.fromTry(conf)
-            token <- Oauth(conf).getToken(code.get)
-            likes <- FriendsLikes(conf).getLikes
-          } yield likes
-          complete(likes)
-      }
+        extractUri {
+          uri =>
+            val code = uri.query().get("code")
+            val likes = for {
+              conf <- Future.fromTry(conf)
+              token <- Oauth(conf).getToken(code.get)
+              likes <- FriendsLikes(conf).getLikes
+            } yield likes
+            complete(likes)
+        }
+    } ~ path("likes") {
+      import ImplicitJsonHandler._
+      val likes = (for {
+        conf <- Future.fromTry(conf)
+        likes <- FriendsLikes(conf).getLikesAsJsValue
+      } yield {
+        likes.convertTo[Item]
+      })
+      complete(likes.map(_.toString))
     } ~ path("")(complete("Le serveur est ON."))
 
   val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
