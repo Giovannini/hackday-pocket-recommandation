@@ -51,36 +51,41 @@ object Main extends App {
           }
         }
       } ~
-      options {
-        extractRequest { request =>
-          val vlsOrigin: String = request.headers.find(h => h.name() == "Origin").map(_.value()).getOrElse("")
-          val headers: immutable.Seq[HttpHeader] = collection.immutable.Seq(
-            HttpHeader.parse("Access-Control-Allow-Origin", "*"),
-            HttpHeader.parse("Access-Control-Allow-Methods", "POST, OPTIONS"),
-            HttpHeader.parse("Access-Control-Allow-Headers", "accept, content-type, access-control-allow-origin"),
-            HttpHeader.parse("Access-Control-Max-Age", "1728000")
-          ).collect { case ParsingResult.Ok(h, _) => h }
-          respondWithHeaders(headers) {
-            complete(StatusCodes.OK)
+        options {
+          extractRequest { request =>
+            val vlsOrigin: String = request.headers.find(h => h.name() == "Origin").map(_.value()).getOrElse("")
+            val headers: immutable.Seq[HttpHeader] = collection.immutable.Seq(
+              HttpHeader.parse("Access-Control-Allow-Origin", "*"),
+              HttpHeader.parse("Access-Control-Allow-Methods", "POST, OPTIONS"),
+              HttpHeader.parse("Access-Control-Allow-Headers", "accept, content-type, access-control-allow-origin"),
+              HttpHeader.parse("Access-Control-Max-Age", "1728000")
+            ).collect { case ParsingResult.Ok(h, _) => h }
+            respondWithHeaders(headers) {
+              complete(StatusCodes.OK)
+            }
           }
         }
-      }
     } ~ path("partialrecommand") {
       post(Reader.route(Extractor.partialRoute))
     } ~ path("login") {
-        redirect(Oauth(conf.get).uri, StatusCodes.PermanentRedirect)
+      redirect(Oauth(conf.get).uri, StatusCodes.PermanentRedirect)
+    } ~ path("language") {
+      post(Reader.route { case (a, _) =>
+        println(a.take(50))
+        Extractor.language(a)
+      })
     } ~ path("callback") {
-        extractUri {
-          import TokenResultJsonSupport._
-          uri =>
-            val code = uri.query().get("code")
-            val likes = for {
-              conf <- Future.fromTry(conf)
-              token <- Oauth(conf).getToken(code.get)
-              likes <- FriendsLikes(conf).getLikes
-            } yield likes
-            complete(likes)
-        }
+      extractUri {
+        import TokenResultJsonSupport._
+        uri =>
+          val code = uri.query().get("code")
+          val likes = for {
+            conf <- Future.fromTry(conf)
+            token <- Oauth(conf).getToken(code.get)
+            likes <- FriendsLikes(conf).getLikes
+          } yield likes
+          complete(likes)
+      }
     } ~ path("")(complete("Le serveur est ON."))
 
   val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)

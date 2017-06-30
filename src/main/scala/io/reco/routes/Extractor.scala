@@ -66,4 +66,17 @@ object Extractor {
         }.mkString("")
     }
   }
+
+  def language(textFromArticle: String)(
+    implicit
+    actorSystem: ActorSystem,
+    mat: Materializer,
+    ec: ExecutionContext
+  ): Route = onComplete(meaningExtractor.findLanguage(textFromArticle)) {
+    case util.Success(response) => complete(response)
+    case util.Failure(e) =>
+      println("Error in language: " + e.getMessage)
+      complete(StatusCodes.InternalServerError)
+  }
+
 }
