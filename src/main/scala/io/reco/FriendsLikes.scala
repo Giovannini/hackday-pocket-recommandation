@@ -10,7 +10,9 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import spray.json._
 
-class FriendsLikes(conf: Conf) {
+import io.reco.model._
+
+class FriendsLikes(conf: Conf)(implicit sys: ActorSystem, mat: Materializer, ec: ExecutionContext) {
   val URI_LIKES = "/v2.9/me/friends"
   private val params = Map(("fields", "id,name,likes"),
     ("access_token", conf.token))
@@ -27,16 +29,27 @@ class FriendsLikes(conf: Conf) {
     }*/
   }
 
-  def getLikesAsJsValue(implicit sys: ActorSystem, mat: Materializer, ec: ExecutionContext): Future[JsValue] = {
+  def getLikesAsJsValue: Future[JsValue] = {
     val httpRequest = HttpRequest(uri = uri)
-    println(s"https:${httpRequest.uri}")
     for {
       response <- Http().singleRequest(httpRequest.copy(uri = s"https:${httpRequest.uri}"))
       entity <- Unmarshal(response.entity).to[String]
     } yield entity.parseJson
   }
 
+  def suggestedFriends(entities: Seq[Entity]): Future[Seq[Data]] = {
+    import ImplicitJsonHandler._
+    getLikesAsJsValue.map{ jsValue =>
+      val item = jsValue.convertTo[Item]
+      item.data.filter {
+        case Data(_, _, Some(likes)) =>
+          likes.data.exists(elem => entities.map(_.word).exists(word => elem.name.contains(word)))
+        case _ => false
+      }
+    }
+  }
+
 }
 object FriendsLikes {
-  def apply(conf: Conf): FriendsLikes = new FriendsLikes(conf)
+  def apply(conf: Conf)(implicit sys: ActorSystem, mat: Materializer, ec: ExecutionContext): FriendsLikes = new FriendsLikes(conf)
 }

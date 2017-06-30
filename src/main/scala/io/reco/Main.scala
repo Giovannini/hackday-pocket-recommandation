@@ -8,11 +8,10 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
 import akka.http.scaladsl.model.HttpHeader
-import akka.http.scaladsl.server.Directives.{path, _}
+import akka.http.scaladsl.server.Directives.{complete, path, _}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.typesafe.config.ConfigFactory
 import akka.http.scaladsl.model.StatusCodes
-
 import io.reco.routes.{Extractor, Reader}
 import io.reco.model._
 
@@ -94,6 +93,16 @@ object Main extends App {
       } yield {
         likes.convertTo[Item]
       })
+      complete(likes.map(_.toString))
+    } ~ path("suggested") {
+      val entity = Entity("Passion", 11)
+      val likes = for {
+        conf <- Future.fromTry(conf)
+        likes <- FriendsLikes(conf).suggestedFriends(Seq(entity))
+      } yield {
+        println(likes)
+        likes
+      }
       complete(likes.map(_.toString))
     } ~ path("")(complete("Le serveur est ON."))
 

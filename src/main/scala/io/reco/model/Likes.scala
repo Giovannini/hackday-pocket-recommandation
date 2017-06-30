@@ -2,7 +2,7 @@ package io.reco.model
 
 import spray.json.DefaultJsonProtocol._
 
-case class Like(name: String, id: String, created_time: String)
+  case class Like(name: String, id: String, created_time: String)
   case class Cursors(before: String, after: String)
   case class Paging(cursors: Cursors, next: Option[String])
   case class Likes(data: Seq[Like], paging: Paging)
