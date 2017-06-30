@@ -15,29 +15,37 @@ import spray.json.{JsObject, _}
 
 object Extractor {
 
-  def meaningExtractor(implicit
+  def meaningExtractor(
+    implicit
     actorSystem: ActorSystem,
     mat: Materializer,
     ec: ExecutionContext
-  ) = new MeaningExtractor
+  ): MeaningExtractor = {
+    new MeaningExtractor
+  }
 
-  def route(textFromArticle: String)(implicit
+  def route(textFromArticle: String, keywords: Seq[String])(
+    implicit
     actorSystem: ActorSystem,
     mat: Materializer,
     ec: ExecutionContext
   ): Route = {
     onComplete(meaningExtractor.getEntitiesFromText(textFromArticle)) {
-      case util.Success(entities) => complete(JsObject("entities" -> JsArray(
-        entities
-          .filter(_.relevance > 55)
-          .sortBy(-_.relevance)
-          .map(Entity.entityFormat.write):_*)
+      case util.Success(entities) => complete(JsObject(
+        "entities" -> JsArray(
+          entities
+            .filter(_.relevance > 55)
+            .sortBy(-_.relevance)
+            .map(Entity.entityFormat.write): _*
+        ),
+        "keywords" -> JsArray(keywords.map(JsString(_)).toVector)
       ))
       case util.Failure(_) => complete(StatusCodes.InternalServerError)
     }
   }
 
-  def partialRoute(textFromArticle: String)(implicit
+  def partialRoute(textFromArticle: String, keywords: Seq[String])(
+    implicit
     actorSystem: ActorSystem,
     mat: Materializer,
     ec: ExecutionContext

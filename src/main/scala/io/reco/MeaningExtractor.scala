@@ -11,7 +11,8 @@ import akka.stream.Materializer
 import io.reco.model.Entity
 import spray.json.{JsArray, JsString, JsValue, _}
 
-class MeaningExtractor(implicit
+class MeaningExtractor(
+  implicit
   actorSystem: ActorSystem,
   mat: Materializer,
   ec: ExecutionContext
@@ -20,17 +21,17 @@ class MeaningExtractor(implicit
   def getEntitiesFromText(text: String, lang: String = "en"): Future[Seq[Entity]] = {
     getMeaningForText(text, lang).map { json =>
       json.asJsObject.getFields("entity_list", "concept_list") match {
-        case Seq(JsArray(entityList), JsArray(conceptList)) => (entityList ++ conceptList).map {
-          _.asJsObject.getFields("relevance", "form") match {
-            case Vector(JsString(relevance), JsString(word)) => Entity(word, relevance.toInt)
-            case other =>
-              println(s"Error, pas d'entity: $other")
-              sys.error("Ca casse no1")
+        case Seq(JsArray(entityList), JsArray(conceptList)) =>
+          val result = (entityList ++ conceptList).map {
+            _.asJsObject.getFields("relevance", "form") match {
+              case Vector(JsString(relevance), JsString(word)) => Entity(word, relevance.toInt)
+            }
           }
-        }
-        case other =>
-          println(s"Error, pas de jsARray: $other")
-          sys.error("Ca casse no2")
+          result.foldLeft(Seq.empty[Entity]) { case (acc, e) =>
+            val currentWords = acc.map(_.word.toLowerCase)
+            if(currentWords.contains(e.word.toLowerCase)) acc
+            else acc :+ e
+          }
       }
     }
   }

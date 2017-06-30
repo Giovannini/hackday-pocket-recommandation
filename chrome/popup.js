@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
     getInfos(tab.url).then(response => {
       loader.style.display = "none";
       writeResult(response.entities, d, contentDiv);
+      if (response.keywords.length > 0) writeKeywords(response.keywords, d, contentDiv);
     })
 
   });
@@ -52,4 +53,15 @@ function writeResult(entities, d, contentDiv) {
   });
 
   contentDiv.appendChild(f);
+}
+
+function writeKeywords(keywords, d, contentDiv) {
+  const p = d.createElement('p');
+  const span = d.createElement('span');
+  span.textContent = "Keywords: ";
+  p.appendChild(span);
+  const text = d.createTextNode(keywords.join(", "));
+  p.appendChild(text);
+
+  contentDiv.appendChild(p)
 }

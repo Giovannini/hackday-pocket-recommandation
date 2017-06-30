@@ -33,9 +33,9 @@ object Main extends App {
 
   val route =
     path("url") {
-      post(Reader.route(complete(_)))
+      post(Reader.route((a, _) => complete(a)))
     } ~ path("toto") {
-      get(Extractor.route(ArticleExample.value))
+      get(Extractor.route(ArticleExample.value, Nil))
     } ~ path("recommand") {
       post {
         extractRequest { request =>
@@ -53,9 +53,7 @@ object Main extends App {
       } ~
       options {
         extractRequest { request =>
-          request.headers.foreach(h => println(s"Header: $h"))
           val vlsOrigin: String = request.headers.find(h => h.name() == "Origin").map(_.value()).getOrElse("")
-          println(vlsOrigin)
           val headers: immutable.Seq[HttpHeader] = collection.immutable.Seq(
             HttpHeader.parse("Access-Control-Allow-Origin", "*"),
             HttpHeader.parse("Access-Control-Allow-Methods", "POST, OPTIONS"),
