@@ -1,13 +1,14 @@
 package io.reco
 
 import scala.collection.immutable
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
-import akka.http.scaladsl.model.{HttpHeader, StatusCodes}
-import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.model.HttpHeader
+import akka.http.scaladsl.server.Directives.{path, _}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.typesafe.config.ConfigFactory
 import io.reco.routes.{Extractor, Reader}
@@ -68,18 +69,21 @@ object Main extends App {
       }
     } ~ path("partialrecommand") {
       post(Reader.route(Extractor.partialRoute))
-    } ~ path("")(complete("Le serveur est ON."))
-      path("login") {
+    } ~ path("login") {
         redirect(Oauth(conf.get).uri, StatusCodes.PermanentRedirect)
-      } ~
-      path("callback") {
+    } ~ path("callback") {
         extractUri {
+          import TokenResultJsonSupport._
           uri =>
             val code = uri.query().get("code")
-            val token = Oauth(conf.get).getToken(code.get)
-            complete(token)
+            val likes = for {
+              conf <- Future.fromTry(conf)
+              token <- Oauth(conf).getToken(code.get)
+              likes <- FriendsLikes(conf).getLikes
+            } yield likes
+            complete(likes)
         }
-      }
+    } ~ path("")(complete("Le serveur est ON."))
 
   val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
   println(s"Server online at http://localhost:8080/")
