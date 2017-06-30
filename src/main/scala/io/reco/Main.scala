@@ -12,8 +12,10 @@ import akka.http.scaladsl.server.Directives.{complete, path, _}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.typesafe.config.ConfigFactory
 import akka.http.scaladsl.model.StatusCodes
+import io.reco.Main.conf
 import io.reco.routes.{Extractor, Reader}
 import io.reco.model._
+import io.reco.routes.Extractor.meaningExtractor
 
 object Main extends App {
 
@@ -78,32 +80,40 @@ object Main extends App {
         extractUri {
           uri =>
             val code = uri.query().get("code")
-            val likes = for {
+            for {
               conf <- Future.fromTry(conf)
               token <- Oauth(conf).getToken(code.get)
-              likes <- FriendsLikes(conf).getLikes
-            } yield likes
-            complete(likes)
+            } yield token
+            complete(StatusCodes.OK)
         }
-    } ~ path("likes") {
-      import ImplicitJsonHandler._
-      val likes = (for {
-        conf <- Future.fromTry(conf)
-        likes <- FriendsLikes(conf).getLikesAsJsValue
-      } yield {
-        likes.convertTo[Item]
-      })
-      complete(likes.map(_.toString))
     } ~ path("suggested") {
-      val entity = Entity("Passion", 11)
-      val likes = for {
-        conf <- Future.fromTry(conf)
-        likes <- FriendsLikes(conf).suggestedFriends(Seq(entity))
-      } yield {
-        println(likes)
-        likes
+      post {
+        extractRequest { request =>
+          val vlsOrigin: String = request.headers.find(h => h.name() == "Origin").map(_.value()).getOrElse("")
+          val headers: immutable.Seq[HttpHeader] = collection.immutable.Seq(
+            HttpHeader.parse("Access-Control-Allow-Origin", vlsOrigin),
+            HttpHeader.parse("Access-Control-Allow-Credentials", "true"),
+            HttpHeader.parse("Access-Control-Max-Age", "1728000"),
+            HttpHeader.parse("Cache-Control", "no-cache")
+          ).collect { case ParsingResult.Ok(h, _) => h }
+          respondWithHeaders(headers) {
+            Reader.route { case (text, keywords) =>
+              onComplete(meaningExtractor.getEntitiesFromText(text).map { entities =>
+                for {
+                  conf <- Future.fromTry(conf)
+                  friends <- FriendsLikes(conf).getFriendsLiking(entities)
+                } yield {
+                  println(friends)
+                  friends
+                }
+              }) {
+                case util.Success(friends) => complete(friends.map(_.toString))
+                case util.Failure(_) => complete(StatusCodes.BadRequest)
+              }
+            }
+          }
+        }
       }
-      complete(likes.map(_.toString))
     } ~ path("")(complete("Le serveur est ON."))
 
   val port = configuration.getInt("api.port")
