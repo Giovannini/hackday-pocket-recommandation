@@ -1,41 +1,27 @@
 document.addEventListener('DOMContentLoaded', function() {
-  var checkPageButton = document.getElementById('checkPage');
-  checkPageButton.addEventListener('click', function() {
+  const contentDiv = document.getElementById('content');
+  const loader = document.getElementById('loader');
 
-    chrome.tabs.getSelected(null, function(tab) {
-      d = document;
+  loader.style.display = "block";
 
-      console.log(tab.url);
+  chrome.tabs.getSelected(null, function(tab) {
+    d = document;
 
-      getInfos(tab.url);
+    console.log(tab.url);
+    while (contentDiv.firstChild) {
+      contentDiv.removeChild(contentDiv.firstChild);
+    }
 
-      // var f = d.createElement('ul');
-      // var f1 = d.createElement('li');
-      // f1.textContent = 'Kévin Laurent';
-      //
-      // var f2 = d.createElement('li');
-      // f2.textContent = 'Hamza Bahassou';
-      //
-      // f.appendChild(f1);
-      // f.appendChild(f2);
-      // d.body.appendChild(f);
-    });
-  }, false);
+    getInfos(tab.url).then(response => {
+      loader.style.display = "none";
+      writeResult(response.entities, d, contentDiv);
+    })
+
+  });
 }, false);
 
 function getInfos(url) {
-  // const xhr = new XMLHttpRequest();
-  // xhr.open('POST', 'http://localhost:8080/recommand', true);
-  // xhr.setRequestHeader("Content-Type", "application/json");
-  // xhr.onreadystatechange = function() {
-  //   if (xhr.readyState === XMLHttpRequest.DONE) {
-  //     console.log(xhr.responseText);
-  //   }
-  // };
-  // xhr.send(JSON.stringify({ url }));
-  console.log(window.location);
-
-  fetch('http://localhost:8080/recommand', {
+  return fetch('http://localhost:8080/recommand', {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
@@ -46,10 +32,24 @@ function getInfos(url) {
     },
     body: JSON.stringify({ url })
   }).then(res => {
-    console.log(res);
     return res.json()
-  }, err => console.error(err)).then(
-    s => console.log(s),
-    e => console.warn(e)
-  )
+  }, err => console.error(err))
+}
+
+function writeResult(entities, d, contentDiv) {
+  const f = d.createElement('ul');
+  entities.map(e => {
+    const li = d.createElement('li');
+    const relevanceSpan = d.createElement('span');
+    const wordSpan = d.createElement('span');
+    relevanceSpan.textContent = `${e.relevance}`;
+    relevanceSpan.className = "relevance-span";
+    wordSpan.textContent = `${e.word}`;
+    wordSpan.className = "word-span";
+    li.appendChild(wordSpan);
+    li.appendChild(relevanceSpan);
+    f.appendChild(li);
+  });
+
+  contentDiv.appendChild(f);
 }

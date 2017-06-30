@@ -1,0 +1,31 @@
+img.loader {
+    width: 50px;
+    height: 50px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+
+div.content {
+    width: 300px;
+}
+
+div.content ul {
+    padding: 0;
+    list-style: none;
+}
+
+div.content ul li {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: initial;
+}
+
+div.content ul li span.word-span {
+    font-weight: 700;
+}
+
+div.content ul li span.relevance-span {
+    color: #ff8b59;
+}
